@@ -36,27 +36,24 @@ x-shared: &shared
       condition: service_healthy
 services:
   next-app:
-    container_name: next-app
     build:
       context: ./next-app
       dockerfile: dev.Dockerfile
-
-    # Set environment variables directly in the compose file
     environment:
-      ENV_VARIABLE: ${ENV_VARIABLE}
-      NEXT_PUBLIC_ENV_VARIABLE: ${NEXT_PUBLIC_ENV_VARIABLE}
-
-    # Set environment variables based on the .env file
+      - NODE_ENV=development
     env_file:
       - .env
     volumes:
-      - ./next-app/src:/app/src
+      - ./next-app/app:/app/app
       - ./next-app/public:/app/public
     restart: always
     ports:
       - 3000:3000
     networks:
       - my_network
+    depends_on:
+      postgres:
+        condition: service_healthy
   postgres:
     image: postgres:17
     restart: always
@@ -76,6 +73,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - my_network
 
   redis:
     image: redis:7-alpine
@@ -87,6 +86,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - my_network
 
   n8n:
     <<: *shared
@@ -94,6 +95,8 @@ services:
     command: start
     ports:
       - "127.0.0.1:5678:5678"
+    networks:
+      - my_network
 
   n8n-worker-1:
     <<: *shared
@@ -101,6 +104,8 @@ services:
     command: worker
     depends_on:
       - n8n
+    networks:
+      - my_network
 
   n8n-worker-2:
     <<: *shared
@@ -108,7 +113,8 @@ services:
     command: worker
     depends_on:
       - n8n
-  # Add more containers below (nginx, postgres, etc.)
+    networks:
+      - my_network
 
 # Define a network, which allows containers to communicate
 # with each other, by using their container name as a hostname
